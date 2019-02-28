@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Video;
@@ -18,12 +18,13 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
 
     SMI.SMIEyeTrackingUnity smiInstance = null;
 
-    public int subject_id = 99;
+    public int subject_id = 10;
     string video_id;
     int video_frame_n = 0;
     int video_frame_max = 0;
     int hmd_frame = 0;
     Vector3 screenPos;
+    Vector3 camAngle;
 
 
     //Für TextWriter Eye Tracking
@@ -32,7 +33,7 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
     public SMIEyeTrackingUnity smi;
     public Camera cam;
 
-    readonly VideoClip videoClip; // formerly:     UnityEngine.Video.VideoClip videoClip;
+    readonly VideoClip videoClip; // old:     UnityEngine.Video.VideoClip videoClip;
 
     string log_header;
     string frame_log;
@@ -82,14 +83,16 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
             else
             {
                 Debug.LogError("Unity Prefab missing: SMI_GazePoint");
-            }
-           
+                UnityEditor.EditorApplication.isPlaying = false;
+
+        }
+
         // prepare log
         string log_file = "";
         // path saving log files
-        string log_path = Directory.GetCurrentDirectory() + "/log";
+        string log_path = Directory.GetCurrentDirectory() + "/log" + "/subject_" + subject_id.ToString("D2");
         // path saving screenshots
-        string screenshot_path = Directory.GetCurrentDirectory() + "/log/frames/" + subject_id.ToString("D2") + "/" + video_id;
+        string screenshot_path = log_path + "/frames/" + video_id;
 
         // check path exists
         if (!Directory.Exists(log_path))
@@ -103,17 +106,24 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
             {
             Directory.CreateDirectory(screenshot_path);
             }
+        else
+           {
+           Debug.LogError("Directory for frames already exists! Please check subject_id or scene.");
+           UnityEditor.EditorApplication.isPlaying = false;
+           }
 
 
-        log_file = log_path + "/log_" +  date + '_' + subject_id.ToString("D2") + ".txt";
+
+        log_file = log_path + "/log_" +  date + '_' + subject_id.ToString("D2") + "_" + video_id + ".txt";
         // Debug.Log(log_file);
-        
+
         // Debug.Log("Opening log_file...");
-        sw = new StreamWriter(log_file);
+        sw = new StreamWriter(log_file);//, true); // append = true, don't overwrtie log file
 
         log_header = "subject_id" + "\t" + "date" + "\t" + "video_id" +
                         "\t" + "frame_video" + 
-                        "\t" + "screenPos.x" + "\t" + "screenPos.y"; 
+                        "\t" + "screenPos.x" + "\t" + "screenPos.y" +
+                        "\t" + "camAngle.x" + "\t" + "camAngle.y" + "\t" + "camAngle.z"; 
 
 
         // Debug.Log("Writing header...");
@@ -130,6 +140,10 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
     void Update() 
     {
         var videoPlayer = GameObject.Find("360sphere").GetComponent<UnityEngine.Video.VideoPlayer>(); // warum 2 mal? einmal in update einmal in awake
+        // path saving log files
+        string log_path = Directory.GetCurrentDirectory() + "/log" + "/subject_" + subject_id.ToString("D2");
+        // path saving screenshots
+        string screenshot_path = log_path + "/frames/" + video_id; // warum 2 mal? einmal in update einmal in awake
 
         if (gazeVis != null)
             UpdateThePosition();
@@ -144,12 +158,13 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
         // (0,0); the right-top is (pixelWidth,pixelHeight). The z position is
         // in world units from the camera."
         screenPos = cam.WorldToScreenPoint(gazeVis.transform.position);
+        camAngle = cam.transform.localEulerAngles;
 
         ////////////////////////////////////////////////////////////////////////
 
-        frame_log = subject_id.ToString("D2") + "\t" + date + "\t" + video_id +                   "\t" + video_frame_n.ToString("D5")
-                        + "\t" + Math.Round(screenPos.x) + "\t" + Math.Round(screenPos.y);  
-                        // + "\t" + bi_gaze_dir.x + "\t" + bi_gaze_dir.y  
+        frame_log = subject_id.ToString("D2") + "\t" + date + "\t" + video_id + "\t" + video_frame_n.ToString("D5")
+                        + "\t" + Math.Round(screenPos.x) + "\t" + Math.Round(screenPos.y)
+                        + "\t" + Math.Round(camAngle.x) + "\t" + Math.Round(camAngle.y) + "\t" + Math.Round(camAngle.z);
                         // + "\t" + bi_gaze_dir.z  
                         // + "\t" + right_gaze_dir.x + "\t" + right_gaze_dir.y  
                         // + "\t" + right_gaze_dir.z  
@@ -161,15 +176,16 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
         ////////////////////////////////////////////////////////////////////////
 
         captureScreenshot |=
-            video_frame_n != 0 & // don't capture screenshots when video is not playing
-            video_frame_n % 6 == 0 & // capture every 6th screenshot
-            video_frame_n <= video_frame_max; // don't capture screenshots after last frame
- 
+            video_frame_n >= 230  & // don't capture screenshots when video is not playing; 250 frames black (50fps * 5 sekunde) - 20 = 3 black screenshots, frame 250 last black
+            video_frame_n % 10 == 0 & // capture every 10th screenshot
+            video_frame_n <= video_frame_max-60; // don't capture screenshots after last frame;  100 frames black (50fps * 2 sekunde) - 60 = 4 black screenshots, frame 1000 last color
+
         if (captureScreenshot)
 
         {
 
             Debug.Log("Take screen shot: " + video_frame_n.ToString("D5"));
+
             captureScreenshot = false;
 
             // create screenshot objects if needed
@@ -196,8 +212,8 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
             RenderTexture.active = null;
 
             // get filename
-            string screenshot_filename = Directory.GetCurrentDirectory() + "/log/frames/" + subject_id.ToString("D2") + "/" + "frame_" + video_frame_n.ToString("D5") + ".ppm";
- 
+            string screenshot_filename = screenshot_path + "/" + video_id + "_frame_" + video_frame_n.ToString("D5") + ".ppm";
+
             // pull in our file header/data bytes for the specified image format (has to be done from main thread)
             byte[] screenshot_header = null;
             byte[] screenshot_data = null;
