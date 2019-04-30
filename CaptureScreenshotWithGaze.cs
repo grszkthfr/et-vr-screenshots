@@ -18,7 +18,7 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
 
     SMI.SMIEyeTrackingUnity smiInstance = null;
 
-    public int subject_id = 10;
+    public int subject_id = 0;
     string video_id;
     int video_frame_n = 0;
     int video_frame_max = 0;
@@ -42,7 +42,7 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
 
     private int captureWidth = 756;     // 4k = 3840 x 2160´, 1080p = 1920 x 1080, 1512 x 1680, 756 x 840
     private int captureHeight = 840;
- 
+
     // optimize for many screenshots will not destroy any objects so future screenshots will be fast
     private bool optimizeForManyScreenshots = true; // necessary or make default?
 
@@ -52,17 +52,18 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
 
     // commands
     private bool captureScreenshot = false;
-   
+
    void Awake()
    {
-       
-       //Kalibrieren();
-       
-    }
-    
-    void Start() 
-    {
 
+       //Kalibrieren();
+
+    }
+
+    // prepare everything: paths, names, ...
+    void Start()
+    {
+        // write log to console
         Debug.Log("Create log file");
 
         //get video_id from video player
@@ -121,29 +122,31 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
         sw = new StreamWriter(log_file);//, true); // append = true, don't overwrtie log file
 
         log_header = "subject_id" + "\t" + "date" + "\t" + "video_id" +
-                        "\t" + "frame_video" + 
+                        "\t" + "frame_video" +
                         "\t" + "screenPos.x" + "\t" + "screenPos.y" +
-                        "\t" + "camAngle.x" + "\t" + "camAngle.y" + "\t" + "camAngle.z"; 
+                        "\t" + "camAngle.x" + "\t" + "camAngle.y" + "\t" + "camAngle.z";
 
 
         // Debug.Log("Writing header...");
         sw.WriteLine(log_header);
-        
+
     }
-    
+
     public void CaptureScreenshot()
     {
         captureScreenshot = true; //necessary to evaluate?!
     }
 
-    // Update is called once per frame
-    void Update() 
+    // update once per frame
+    void Update()
     {
-        var videoPlayer = GameObject.Find("360sphere").GetComponent<UnityEngine.Video.VideoPlayer>(); // warum 2 mal? einmal in update einmal in awake
+        // ? warum alles doppelt in update & in awake
+        var videoPlayer = GameObject.Find("360sphere").GetComponent<UnityEngine.Video.VideoPlayer>();
+
         // path saving log files
         string log_path = Directory.GetCurrentDirectory() + "/log" + "/subject_" + subject_id.ToString("D2");
         // path saving screenshots
-        string screenshot_path = log_path + "/frames/" + video_id; // warum 2 mal? einmal in update einmal in awake
+        string screenshot_path = log_path + "/frames/" + video_id; 
 
         if (gazeVis != null)
             UpdateThePosition();
@@ -156,20 +159,23 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
         // coords on screen
         //"Screenspace is defined in pixels. The bottom-left of the screen is
         // (0,0); the right-top is (pixelWidth,pixelHeight). The z position is
-        // in world units from the camera."
+        // in world units from the camera." (https://docs.unity3d.com/ScriptReference/Camera.ScreenToWorldPoint.html)
         screenPos = cam.WorldToScreenPoint(gazeVis.transform.position);
         camAngle = cam.transform.localEulerAngles;
 
         ////////////////////////////////////////////////////////////////////////
 
-        frame_log = subject_id.ToString("D2") + "\t" + date + "\t" + video_id + "\t" + video_frame_n.ToString("D5")
-                        + "\t" + Math.Round(screenPos.x) + "\t" + Math.Round(screenPos.y)
-                        + "\t" + Math.Round(camAngle.x) + "\t" + Math.Round(camAngle.y) + "\t" + Math.Round(camAngle.z);
-                        // + "\t" + bi_gaze_dir.z  
-                        // + "\t" + right_gaze_dir.x + "\t" + right_gaze_dir.y  
-                        // + "\t" + right_gaze_dir.z  
-                        // + "\t" + left_gaze_dir.x + "\t" + left_gaze_dir.y  
-                        // + "\t" + left_gaze_dir.z; 
+        frame_log = 
+            subject_id.ToString("D2") + "\t" + date + "\t" +
+            video_id + "\t" + video_frame_n.ToString("D5") + "\t" +
+            Math.Round(screenPos.x) + "\t" + Math.Round(screenPos.y) + "\t" +
+            Math.Round(camAngle.x) + "\t" + Math.Round(camAngle.y) + "\t" +
+            Math.Round(camAngle.z);
+                        // + "\t" + bi_gaze_dir.z
+                        // + "\t" + right_gaze_dir.x + "\t" + right_gaze_dir.y
+                        // + "\t" + right_gaze_dir.z
+                        // + "\t" + left_gaze_dir.x + "\t" + left_gaze_dir.y
+                        // + "\t" + left_gaze_dir.z;
 
         sw.WriteLine(frame_log);
 
@@ -186,6 +192,7 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
 
             Debug.Log("Take screen shot: " + video_frame_n.ToString("D5"));
 
+            // reset status for next evaluation
             captureScreenshot = false;
 
             // create screenshot objects if needed
@@ -201,12 +208,12 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
             Camera camera = this.GetComponent<Camera>(); // NOTE: added because there was no reference to camera in original script; must add this script to Camera
             camera.targetTexture = renderTexture;
             camera.Render();
- 
-            // read pixels will read from the currently active render texture so make our offscreen 
+
+            // read pixels will read from the currently active render texture so make our offscreen
             // render texture active and then read the pixels
             RenderTexture.active = renderTexture;
             screenShot.ReadPixels(rect, 0, 0);
- 
+
             // reset active camera texture and render texture
             camera.targetTexture = null;
             RenderTexture.active = null;
@@ -217,12 +224,12 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
             // pull in our file header/data bytes for the specified image format (has to be done from main thread)
             byte[] screenshot_header = null;
             byte[] screenshot_data = null;
-                      
+
             // create a file header for ppm file
             string screenshot_headerstring = string.Format("P6\n{0} {1}\n255\n", rect.width, rect.height);
             screenshot_header = System.Text.Encoding.ASCII.GetBytes(screenshot_headerstring);
             screenshot_data = screenShot.GetRawTextureData();
-             
+
             // create new thread to save the image to file (only operation that can be done in background)
             new System.Threading.Thread(() =>
             {
@@ -233,7 +240,7 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
                 f.Close();
                 //Debug.Log(string.Format("Wrote screenshot {0} of size {1}", screenshot_filename, screenshot_data.Length));
             }).Start();
- 
+
             // cleanup if needed
             if (optimizeForManyScreenshots == false)
             {
@@ -247,7 +254,7 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
     }
 
 
-
+    // unused
     public void Kalibrieren()
     {
         //Kalibrieren
@@ -290,7 +297,7 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
                 float distance = 100;
                 Vector3 scale = initialeScale * distance;
                 Ray gazeRay = smiInstance.smi_GetRayFromGaze();
-                
+
                 gazeVis.transform.position = gazeRay.origin + Vector3.Normalize(gazeRay.direction) * distance;
                 gazeVis.transform.rotation = smiInstance.transform.rotation;
                 if (gazeRay.direction != Vector3.zero)
@@ -306,6 +313,8 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
             }
 
         }
+
+    // ? unused?
     void OnDisable()
     {
         EndWrite();
