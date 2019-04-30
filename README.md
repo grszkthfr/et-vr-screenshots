@@ -1,4 +1,4 @@
-# et-360vid
+# et-vr-screenshots
 
 ## notes
 
