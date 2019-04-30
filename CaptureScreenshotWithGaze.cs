@@ -7,7 +7,8 @@ using SMI;
 //using System.Text
 using System;
 
-// TODO: do not overwrite file! + cleaning up and commenting + direction head is looking to
+// TODO do not overwrite file!
+// TODO cleaning up and commenting 
 
 public class CaptureScreenshotWithGaze : MonoBehaviour
 {
