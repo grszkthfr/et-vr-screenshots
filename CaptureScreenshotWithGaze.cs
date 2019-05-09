@@ -92,7 +92,7 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
         // prepare log
         string log_file = "";
         // path saving log files
-        string log_path = Directory.GetCurrentDirectory() + "/log" + "/subject_" + subject_id.ToString("D2");
+        string log_path = Directory.GetCurrentDirectory() + "/log_vr_eyetracking" + "/subject_" + subject_id.ToString("D2");
         // path saving screenshots
         string screenshot_path = log_path + "/frames/" + video_id;
 
@@ -116,7 +116,7 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
 
 
 
-        log_file = log_path + "/log_" +  date + '_' + subject_id.ToString("D2") + "_" + video_id + ".txt";
+        log_file = log_path + "/log_vr_" +  date + '_' + subject_id.ToString("D2") + "_" + video_id + ".txt";
         // Debug.Log(log_file);
 
         // Debug.Log("Opening log_file...");
@@ -145,7 +145,7 @@ public class CaptureScreenshotWithGaze : MonoBehaviour
         var videoPlayer = GameObject.Find("360sphere").GetComponent<UnityEngine.Video.VideoPlayer>();
 
         // path saving log files
-        string log_path = Directory.GetCurrentDirectory() + "/log" + "/subject_" + subject_id.ToString("D2");
+        string log_path = Directory.GetCurrentDirectory() + "/log_vr_eyetracking" + "/subject_" + subject_id.ToString("D2");
         // path saving screenshots
         string screenshot_path = log_path + "/frames/" + video_id; 
 
